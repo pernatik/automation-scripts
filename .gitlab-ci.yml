@@ -1,0 +1,59 @@
+stages:
+  - build
+  - notify
+  - test
+
+include:
+  - '.sborka-backend-and-message.yml'
+  - '.sborka-frontend-and-message.yml'
+  - template: Security/SAST.gitlab-ci.yml # Добавил SAST
+
+spotbugs-sast:
+  stage: test
+  rules: # Против ошибки не найден фаил...
+    - changes:
+       - backend/*
+  variables:
+    COMPILE: "false"
+    SAST_JAVA_VERSION: 11
+    MAVEN_REPO_PATH: ${CI_PROJECT_DIR}/.m2/repository # не забудьте при сборке также указывать эту папку через аргумент -Dmaven.repo.local --> Указал
+    
+sonarqube-backend-sast:
+  needs:
+    - build-backend-code-job # Ускоряем выполнение sonarqube-backend-sast
+  stage: test
+  image: maven:3.8-openjdk-16 # тот самый docker-образ, о котором мы все узнаем в будущем
+  script:
+    - cd backend
+    - >
+      mvn verify sonar:sonar -Dsonar.qualitygate.wait=true
+      -Dsonar.projectName="03_ANDREYKOVALEV_BACKEND"
+      -Dsonar.projectKey=03_ANDREYKOVALEV_BACKEND
+      -Dsonar.host.url=$SONARQUBE_URL
+      -Dsonar.login=$SONAR_LOGIN_BACKEND
+  allow_failure: true
+
+sonarqube-frontend-sast:
+  needs:
+    - build-frontend-code-job # Ускоряем выполнение sonarqube-frontend-sast
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+  stage: test
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner -Dsonar.qualitygate.wait=true
+  allow_failure: true
+  script:
+    - cd frontend/dist/frontend
+    - >
+      sonar-scanner 
+      -Dsonar.projectKey=03_ANDREYKOVALEV_FRONTEND 
+      -Dsonar.sources=. 
+      -Dsonar.host.url=$SONARQUBE_URL 
+      -Dsonar.login=$SONAR_LOGIN_FRONTEND

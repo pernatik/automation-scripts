@@ -1,0 +1,28 @@
+build-backend-code-job:
+  stage: build
+  only:
+    changes:
+    - backend/*
+  script:        
+    - cd backend
+    - mvn package -Dmaven.repo.local=${CI_PROJECT_DIR}/.m2/repository # Добавил аргумент для SAST
+    - echo "BACKEND_BUILD_ARTEFACT_URL=$CI_JOB_URL/artifacts/download?file_type=archive" >> build.env
+    - echo "${CI_JOB_URL}"
+  artifacts:
+    paths:
+      - backend/target/sausage-store-0.0.1-SNAPSHOT.jar 
+      - ${CI_PROJECT_DIR}/.m2/ # сохранение зависимостей для SAST
+
+slack-notification-backend:
+  needs:
+    - build-backend-code-job
+  variables:
+    DATA: '{"text":"2.2 Собран Backend приложения. Ссылка на артефакт: $CI_JOB_URL/artifacts/download?file_type=archive"}'
+    CONTENT_TYPE: 'Content-type: application/json'
+    SLACK_WEBHOOK: 'https://hooks.slack.com/services/...'
+  stage: notify
+  only:
+    changes:
+    - backend/*
+  script:
+    'curl -X POST -H "$CONTENT_TYPE" --data "$DATA" "$SLACK_WEBHOOK"'
