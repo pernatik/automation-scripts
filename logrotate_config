@@ -1,0 +1,31 @@
+/opt/log/sausage-store-backend.log
+{ 
+		su root root
+		hourly 
+		size 10M 
+		rotate 3 
+		create 
+		compress 
+		delaycompress 
+		missingok 
+		dateext 
+		postrotate
+				echo $(date +"%y-%m-%d %T") 'Правило logrotate для backend sausage store отработало =)' >> /opt/student_rotate.log
+		endscript
+} 
+
+/opt/log/sausage-store-frontend.log
+{ 
+		su root root
+		hourly 
+		size 10M 
+		rotate 3
+		create
+		compress
+		delaycompress
+		missingok
+		dateext
+		postrotate
+				echo $(date +"%y-%m-%d %T") 'Правило logrotate для frontend sausage store отработало =)' >> /opt/student_rotate.log
+		endscript	 
+}
